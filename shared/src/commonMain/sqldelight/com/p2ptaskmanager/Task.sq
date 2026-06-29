@@ -79,8 +79,7 @@ SELECT * FROM tasks WHERE id IN :ids;
 searchTasks:
 SELECT t.* FROM tasks t
 JOIN tasks_fts ON tasks_fts.rowid = t.rowid
-WHERE tasks_fts MATCH :query AND t.isDeleted = 0
-ORDER BY rank;
+WHERE tasks_fts MATCH :query AND t.isDeleted = 0;
 
 markCompleted:
 UPDATE tasks SET isCompleted = 1, completedAt = :completedAt, completedByPeerId = :peerId, bujoState = 'COMPLETED', updatedAt = :updatedAt, vectorClock = :vectorClock WHERE id = :id;
