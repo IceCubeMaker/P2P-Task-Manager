@@ -47,21 +47,13 @@ SELECT COUNT(*) FROM task_parents tp
 JOIN tasks t ON tp.childId = t.id
 WHERE tp.parentId = :taskId AND t.isCompleted = 1;
 
-getSubtree:
-WITH RECURSIVE subtree(id) AS (
-  SELECT childId FROM task_parents WHERE parentId = :rootId
-  UNION ALL
-  SELECT tp.childId FROM task_parents tp JOIN subtree s ON tp.parentId = s.id
-)
-SELECT t.* FROM tasks t JOIN subtree s ON t.id = s.id WHERE t.isDeleted = 0;
+getDirectChildren:
+SELECT * FROM tasks WHERE id IN (
+    SELECT childId FROM task_parents WHERE parentId = :parentId
+) AND isDeleted = 0;
 
-getAncestors:
-WITH RECURSIVE ancestors(id) AS (
-  SELECT parentId FROM task_parents WHERE childId = :taskId
-  UNION ALL
-  SELECT tp.parentId FROM task_parents tp JOIN ancestors a ON tp.childId = a.id
-)
-SELECT id FROM ancestors;
+getDirectParents:
+SELECT parentId FROM task_parents WHERE childId = :taskId;
 
 insertDependency:
 INSERT OR IGNORE INTO task_dependencies(taskId, dependsOnTaskId) VALUES (:taskId, :dependsOnTaskId);

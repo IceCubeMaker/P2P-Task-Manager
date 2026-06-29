@@ -124,15 +124,35 @@ class TaskRepository(private val db: AppDatabase) {
     }
 
     suspend fun addSubtask(childId: String, parentId: String) = withContext(Dispatchers.IO) {
-        val ancestors = relQueries.getAncestors(childId).executeAsList()
+        // BFS to collect all ancestors of childId; cycle if parentId is among them
+        val ancestors = mutableSetOf<String>()
+        val queue = ArrayDeque<String>()
+        queue.add(childId)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val parents = relQueries.getDirectParents(current).executeAsList()
+            for (p in parents) { if (ancestors.add(p)) queue.add(p) }
+        }
         if (parentId in ancestors) {
-            throw IllegalArgumentException("Cycle detected: parentId $parentId is already a descendant of $childId")
+            throw IllegalArgumentException("Cycle detected: parentId $parentId is already an ancestor of $childId")
         }
         relQueries.insertParent(childId = childId, parentId = parentId)
     }
 
     suspend fun getSubtaskTree(rootId: String): List<Task> = withContext(Dispatchers.IO) {
-        relQueries.getSubtree(rootId).executeAsList().map { it.toTask() }
+        // BFS replaces WITH RECURSIVE (SQLDelight 2.0.x crashes on recursive CTEs)
+        val result = mutableListOf<Task>()
+        val visited = mutableSetOf<String>()
+        val queue = ArrayDeque<String>()
+        queue.add(rootId)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (!visited.add(current)) continue
+            val children = relQueries.getDirectChildren(current).executeAsList().map { it.toTask() }
+            result.addAll(children)
+            children.forEach { queue.add(it.id) }
+        }
+        result
     }
 
     suspend fun addDependency(taskId: String, dependsOnTaskId: String) = withContext(Dispatchers.IO) {
@@ -214,31 +234,6 @@ class TaskRepository(private val db: AppDatabase) {
 }
 
 private fun com.p2ptaskmanager.db.Tasks.toTask() = Task(
-    id = id,
-    groupId = groupId,
-    creatorPeerId = creatorPeerId,
-    assignedPeerId = assignedPeerId,
-    title = title,
-    description = description,
-    dueDate = dueDate,
-    userImportance = userImportance.toFloat(),
-    estimatedMinutes = estimatedMinutes?.toInt(),
-    reminderOffsetMinutes = reminderOffsetMinutes?.toInt(),
-    recurrenceRuleJson = recurrenceRuleJson,
-    colorLabel = colorLabel?.toInt(),
-    manualSortOrder = manualSortOrder,
-    bujoState = runCatching { BujoState.valueOf(bujoState) }.getOrDefault(BujoState.OPEN),
-    isCompleted = isCompleted != 0L,
-    completedAt = completedAt,
-    completedByPeerId = completedByPeerId,
-    isRepeating = isRepeating != 0L,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-    vectorClock = vectorClock,
-    isDeleted = isDeleted != 0L
-)
-
-private fun com.p2ptaskmanager.db.GetSubtree.toTask() = Task(
     id = id,
     groupId = groupId,
     creatorPeerId = creatorPeerId,
