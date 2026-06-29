@@ -43,7 +43,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build shared module (KMP compile check)
-        run: ./gradlew :shared:compileKotlinAndroid --stacktrace
+        run: ./gradlew :shared:compileDebugKotlinAndroid --stacktrace
 
       - name: Generate SQLDelight interfaces
         run: ./gradlew :shared:generateSqlDelightInterface --stacktrace
