@@ -62,6 +62,9 @@ kotlin {
                 implementation("app.cash.sqldelight:android-driver:2.0.2")
                 implementation("io.insert-koin:koin-android:3.6.0-Beta4")
                 implementation("io.insert-koin:koin-androidx-compose:3.6.0-Beta4")
+                implementation("androidx.datastore:datastore-preferences:1.1.1")
+                implementation("com.github.hannesa2:paho.mqtt.android:4.2.4")
+                implementation("com.google.android.gms:play-services-nearby:18.7.0")
             }
         }
         val desktopMain by getting {
@@ -94,7 +97,7 @@ sqldelight {
         create("AppDatabase") {
             packageName.set("com.p2ptaskmanager.db")
             srcDirs("src/commonMain/sqldelight")
-            generateAsync.set(true)
+            generateAsync.set(false)
         }
     }
 }
