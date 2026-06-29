@@ -1,0 +1,92 @@
+CREATE TABLE IF NOT EXISTS task_parents (
+    childId TEXT NOT NULL,
+    parentId TEXT NOT NULL,
+    PRIMARY KEY (childId, parentId),
+    FOREIGN KEY (childId) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (parentId) REFERENCES tasks(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_tp_parent ON task_parents(parentId);
+CREATE INDEX IF NOT EXISTS idx_tp_child ON task_parents(childId);
+
+CREATE TABLE IF NOT EXISTS task_dependencies (
+    taskId TEXT NOT NULL,
+    dependsOnTaskId TEXT NOT NULL,
+    PRIMARY KEY (taskId, dependsOnTaskId),
+    FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (dependsOnTaskId) REFERENCES tasks(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_dep_task ON task_dependencies(taskId);
+CREATE INDEX IF NOT EXISTS idx_dep_on ON task_dependencies(dependsOnTaskId);
+
+CREATE TABLE IF NOT EXISTS task_tags (
+    taskId TEXT NOT NULL,
+    tag TEXT NOT NULL,
+    PRIMARY KEY (taskId, tag),
+    FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_tag_task ON task_tags(taskId);
+CREATE INDEX IF NOT EXISTS idx_tag_tag ON task_tags(tag);
+
+insertParent:
+INSERT OR IGNORE INTO task_parents(childId, parentId) VALUES (:childId, :parentId);
+
+deleteParent:
+DELETE FROM task_parents WHERE childId = :childId AND parentId = :parentId;
+
+getParentsOf:
+SELECT parentId FROM task_parents WHERE childId = :childId;
+
+getChildrenOf:
+SELECT childId FROM task_parents WHERE parentId = :parentId;
+
+getDirectChildCount:
+SELECT COUNT(*) FROM task_parents WHERE parentId = :taskId;
+
+getCompletedChildCount:
+SELECT COUNT(*) FROM task_parents tp
+JOIN tasks t ON tp.childId = t.id
+WHERE tp.parentId = :taskId AND t.isCompleted = 1;
+
+getSubtree:
+WITH RECURSIVE subtree(id) AS (
+  SELECT childId FROM task_parents WHERE parentId = :rootId
+  UNION ALL
+  SELECT tp.childId FROM task_parents tp JOIN subtree s ON tp.parentId = s.id
+)
+SELECT t.* FROM tasks t JOIN subtree s ON t.id = s.id WHERE t.isDeleted = 0;
+
+getAncestors:
+WITH RECURSIVE ancestors(id) AS (
+  SELECT parentId FROM task_parents WHERE childId = :taskId
+  UNION ALL
+  SELECT tp.parentId FROM task_parents tp JOIN ancestors a ON tp.childId = a.id
+)
+SELECT id FROM ancestors;
+
+insertDependency:
+INSERT OR IGNORE INTO task_dependencies(taskId, dependsOnTaskId) VALUES (:taskId, :dependsOnTaskId);
+
+deleteDependency:
+DELETE FROM task_dependencies WHERE taskId = :taskId AND dependsOnTaskId = :dependsOnTaskId;
+
+getDependenciesOf:
+SELECT dependsOnTaskId FROM task_dependencies WHERE taskId = :taskId;
+
+getBlockedBy:
+SELECT taskId FROM task_dependencies WHERE dependsOnTaskId = :taskId;
+
+insertTag:
+INSERT OR IGNORE INTO task_tags(taskId, tag) VALUES (:taskId, :tag);
+
+deleteTagsForTask:
+DELETE FROM task_tags WHERE taskId = :taskId;
+
+getTagsForTask:
+SELECT tag FROM task_tags WHERE taskId = :taskId ORDER BY tag ASC;
+
+getAllTags:
+SELECT DISTINCT tag FROM task_tags ORDER BY tag ASC;
+
+getTasksByTag:
+SELECT t.* FROM tasks t JOIN task_tags tt ON t.id = tt.taskId
+WHERE tt.tag = :tag AND t.isDeleted = 0 ORDER BY t.dueDate ASC;

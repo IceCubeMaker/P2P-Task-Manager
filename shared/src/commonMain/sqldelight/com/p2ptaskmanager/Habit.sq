@@ -1,0 +1,91 @@
+CREATE TABLE IF NOT EXISTS habit_completions (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    taskId TEXT NOT NULL,
+    completedAt INTEGER NOT NULL,
+    peerId TEXT NOT NULL,
+    FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_hc_task ON habit_completions(taskId);
+CREATE INDEX IF NOT EXISTS idx_hc_time ON habit_completions(completedAt);
+
+CREATE TABLE IF NOT EXISTS task_time_entries (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    taskId TEXT NOT NULL,
+    startAt INTEGER NOT NULL,
+    endAt INTEGER,
+    noteText TEXT,
+    peerId TEXT NOT NULL,
+    FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_tte_task ON task_time_entries(taskId);
+
+CREATE TABLE IF NOT EXISTS today_plan (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    taskId TEXT NOT NULL,
+    sortOrder INTEGER NOT NULL DEFAULT 0,
+    isBreak INTEGER NOT NULL DEFAULT 0,
+    breakDurationMinutes INTEGER,
+    addedManually INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_tp_date ON today_plan(date);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tp_date_task ON today_plan(date, taskId);
+
+insertHabitCompletion:
+INSERT INTO habit_completions(taskId, completedAt, peerId) VALUES (:taskId, :completedAt, :peerId);
+
+getCompletionsForTask:
+SELECT * FROM habit_completions WHERE taskId = :taskId ORDER BY completedAt DESC;
+
+getRecentCompletions:
+SELECT * FROM habit_completions WHERE taskId = :taskId AND completedAt > :since ORDER BY completedAt DESC;
+
+getCompletionsForGroup:
+SELECT hc.* FROM habit_completions hc
+JOIN tasks t ON hc.taskId = t.id
+WHERE t.groupId = :groupId;
+
+insertTimeEntry:
+INSERT INTO task_time_entries(taskId, startAt, endAt, noteText, peerId) VALUES (:taskId, :startAt, :endAt, :noteText, :peerId);
+
+updateTimeEntryEnd:
+UPDATE task_time_entries SET endAt = :endAt WHERE id = :id;
+
+getTimeEntriesForTask:
+SELECT * FROM task_time_entries WHERE taskId = :taskId ORDER BY startAt ASC;
+
+getActiveTimeEntry:
+SELECT * FROM task_time_entries WHERE taskId = :taskId AND endAt IS NULL LIMIT 1;
+
+getTotalActualMinutes:
+SELECT CAST(SUM(endAt - startAt) AS REAL) / 60000.0 FROM task_time_entries WHERE taskId = :taskId AND endAt IS NOT NULL;
+
+getSimilarCompletedDurations:
+SELECT tte.taskId, SUM(tte.endAt - tte.startAt) AS totalMs
+FROM task_time_entries tte
+JOIN tasks t ON tte.taskId = t.id
+JOIN task_tags tt ON t.id = tt.taskId
+WHERE tt.tag IN :tags AND tte.endAt IS NOT NULL AND t.isCompleted = 1
+GROUP BY tte.taskId;
+
+-- Today plan queries
+upsertTodayPlanEntry:
+INSERT OR REPLACE INTO today_plan(date, taskId, sortOrder, isBreak, breakDurationMinutes, addedManually)
+VALUES (:date, :taskId, :sortOrder, :isBreak, :breakDurationMinutes, :addedManually);
+
+getTodayPlan:
+SELECT tp.*, t.title, t.estimatedMinutes, t.isCompleted, t.userImportance
+FROM today_plan tp
+LEFT JOIN tasks t ON tp.taskId = t.id
+WHERE tp.date = :date
+ORDER BY tp.sortOrder ASC;
+
+removeTodayPlanEntry:
+DELETE FROM today_plan WHERE date = :date AND taskId = :taskId;
+
+clearTodayPlan:
+DELETE FROM today_plan WHERE date = :date;
+
+updateTodayPlanOrder:
+UPDATE today_plan SET sortOrder = :sortOrder WHERE id = :id;

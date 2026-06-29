@@ -1,0 +1,22 @@
+.gradle/
+build/
+*.class
+*.log
+*.pyc
+local.properties
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+*.ap_
+*.apk
+!*.apk
+# Keep debug APK out of ignore if needed
+androidApp/build/
+desktopApp/build/
+webApp/build/
+shared/build/

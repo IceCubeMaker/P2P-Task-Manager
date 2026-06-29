@@ -1,0 +1,104 @@
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT NOT NULL PRIMARY KEY,
+    groupId TEXT NOT NULL,
+    creatorPeerId TEXT NOT NULL,
+    assignedPeerId TEXT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    dueDate INTEGER,
+    userImportance REAL NOT NULL DEFAULT 0.5,
+    estimatedMinutes INTEGER,
+    reminderOffsetMinutes INTEGER,
+    recurrenceRuleJson TEXT,
+    colorLabel INTEGER,
+    manualSortOrder INTEGER NOT NULL DEFAULT 0,
+    bujoState TEXT NOT NULL DEFAULT 'OPEN',
+    isCompleted INTEGER NOT NULL DEFAULT 0,
+    completedAt INTEGER,
+    completedByPeerId TEXT,
+    isRepeating INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    vectorClock TEXT NOT NULL DEFAULT '{}',
+    isDeleted INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_group ON tasks(groupId);
+CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(dueDate);
+CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(isCompleted);
+CREATE INDEX IF NOT EXISTS idx_tasks_creator ON tasks(creatorPeerId);
+CREATE INDEX IF NOT EXISTS idx_tasks_sort ON tasks(manualSortOrder);
+
+-- FTS5 virtual table for full-text search
+CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING fts5(
+    title,
+    description,
+    content=tasks,
+    content_rowid=rowid
+);
+
+-- FTS triggers to keep search index in sync
+CREATE TRIGGER IF NOT EXISTS tasks_fts_ai AFTER INSERT ON tasks BEGIN
+    INSERT INTO tasks_fts(rowid, title, description) VALUES (new.rowid, new.title, new.description);
+END;
+CREATE TRIGGER IF NOT EXISTS tasks_fts_ad AFTER DELETE ON tasks BEGIN
+    INSERT INTO tasks_fts(tasks_fts, rowid, title, description) VALUES ('delete', old.rowid, old.title, old.description);
+END;
+CREATE TRIGGER IF NOT EXISTS tasks_fts_au AFTER UPDATE ON tasks BEGIN
+    INSERT INTO tasks_fts(tasks_fts, rowid, title, description) VALUES ('delete', old.rowid, old.title, old.description);
+    INSERT INTO tasks_fts(rowid, title, description) VALUES (new.rowid, new.title, new.description);
+END;
+
+upsertTask:
+INSERT OR REPLACE INTO tasks VALUES ?;
+
+getById:
+SELECT * FROM tasks WHERE id = :id;
+
+getByGroup:
+SELECT * FROM tasks WHERE groupId = :groupId AND isDeleted = 0 ORDER BY manualSortOrder ASC, createdAt DESC;
+
+getByGroups:
+SELECT * FROM tasks WHERE groupId IN :groupIds AND isDeleted = 0 ORDER BY dueDate ASC, manualSortOrder ASC;
+
+getActiveByGroups:
+SELECT * FROM tasks WHERE groupId IN :groupIds AND isDeleted = 0 AND isCompleted = 0 ORDER BY dueDate ASC;
+
+getCompletedByGroups:
+SELECT * FROM tasks WHERE groupId IN :groupIds AND isDeleted = 0 AND isCompleted = 1 ORDER BY completedAt DESC;
+
+getRepeating:
+SELECT * FROM tasks WHERE isRepeating = 1 AND isDeleted = 0;
+
+getManifest:
+SELECT id, vectorClock FROM tasks WHERE groupId = :groupId AND isDeleted = 0;
+
+getByIds:
+SELECT * FROM tasks WHERE id IN :ids;
+
+searchTasks:
+SELECT t.* FROM tasks t
+JOIN tasks_fts ON tasks_fts.rowid = t.rowid
+WHERE tasks_fts MATCH :query AND t.isDeleted = 0
+ORDER BY rank;
+
+markCompleted:
+UPDATE tasks SET isCompleted = 1, completedAt = :completedAt, completedByPeerId = :peerId, bujoState = 'COMPLETED', updatedAt = :updatedAt, vectorClock = :vectorClock WHERE id = :id;
+
+resetCompleted:
+UPDATE tasks SET isCompleted = 0, completedAt = NULL, completedByPeerId = NULL, bujoState = 'OPEN', updatedAt = :updatedAt, vectorClock = :vectorClock WHERE id = :id;
+
+updateBujoState:
+UPDATE tasks SET bujoState = :state, updatedAt = :updatedAt, vectorClock = :vectorClock WHERE id = :id;
+
+updateSortOrder:
+UPDATE tasks SET manualSortOrder = :sortOrder WHERE id = :id;
+
+softDelete:
+UPDATE tasks SET isDeleted = 1, updatedAt = :updatedAt, vectorClock = :vectorClock WHERE id = :id;
+
+getBlockingCount:
+SELECT COUNT(*) FROM task_dependencies WHERE dependsOnTaskId = :taskId;
+
+getCount:
+SELECT COUNT(*) FROM tasks WHERE groupId IN :groupIds AND isDeleted = 0 AND isCompleted = 0;
