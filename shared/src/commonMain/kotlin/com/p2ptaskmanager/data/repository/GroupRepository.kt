@@ -70,7 +70,8 @@ class GroupRepository(private val db: AppDatabase) {
             .map { rows -> rows.map { it.toMember() } }
 }
 
-private fun com.p2ptaskmanager.db.GetAllGroups.toGroup() = Group(
+// SELECT * FROM groups → SQLDelight generates the table class Groups
+private fun com.p2ptaskmanager.db.Groups.toGroup() = Group(
     id = id,
     name = name,
     creatorPeerId = creatorPeerId,
@@ -79,16 +80,8 @@ private fun com.p2ptaskmanager.db.GetAllGroups.toGroup() = Group(
     color = color.toInt()
 )
 
-private fun com.p2ptaskmanager.db.GetGroupById.toGroup() = Group(
-    id = id,
-    name = name,
-    creatorPeerId = creatorPeerId,
-    createdAt = createdAt,
-    inviteCode = inviteCode,
-    color = color.toInt()
-)
-
-private fun com.p2ptaskmanager.db.GetMembersForGroup.toMember() = GroupMember(
+// SELECT * FROM group_members → SQLDelight generates GroupMembers (PascalCase of table name)
+private fun com.p2ptaskmanager.db.GroupMembers.toMember() = GroupMember(
     groupId = groupId,
     peerId = peerId,
     displayName = displayName,
