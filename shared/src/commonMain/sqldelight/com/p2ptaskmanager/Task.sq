@@ -30,7 +30,8 @@ CREATE INDEX IF NOT EXISTS idx_tasks_creator ON tasks(creatorPeerId);
 CREATE INDEX IF NOT EXISTS idx_tasks_sort ON tasks(manualSortOrder);
 
 upsertTask:
-INSERT OR REPLACE INTO tasks VALUES ?;
+INSERT OR REPLACE INTO tasks (id, groupId, creatorPeerId, assignedPeerId, title, description, dueDate, userImportance, estimatedMinutes, reminderOffsetMinutes, recurrenceRuleJson, colorLabel, manualSortOrder, bujoState, isCompleted, completedAt, completedByPeerId, isRepeating, createdAt, updatedAt, vectorClock, isDeleted)
+VALUES (:id, :groupId, :creatorPeerId, :assignedPeerId, :title, :description, :dueDate, :userImportance, :estimatedMinutes, :reminderOffsetMinutes, :recurrenceRuleJson, :colorLabel, :manualSortOrder, :bujoState, :isCompleted, :completedAt, :completedByPeerId, :isRepeating, :createdAt, :updatedAt, :vectorClock, :isDeleted);
 
 getById:
 SELECT * FROM tasks WHERE id = :id;

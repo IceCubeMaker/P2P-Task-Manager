@@ -16,14 +16,14 @@ class GroupRepository(private val db: AppDatabase) {
     private val q = db.groupQueries
 
     fun observeGroups(): Flow<List<Group>> =
-        q.getAllGroups().asFlow().mapToList(Dispatchers.IO).map { rows -> rows.map { it.toGroup() } }
+        q.getAllGroups(::groupMapper).asFlow().mapToList(Dispatchers.IO)
 
     suspend fun getAllGroups(): List<Group> = withContext(Dispatchers.IO) {
-        q.getAllGroups().executeAsList().map { it.toGroup() }
+        q.getAllGroups(::groupMapper).executeAsList()
     }
 
     suspend fun getGroup(id: String): Group? = withContext(Dispatchers.IO) {
-        q.getGroupById(id).executeAsOneOrNull()?.toGroup()
+        q.getGroupById(id, ::groupMapper).executeAsOneOrNull()
     }
 
     suspend fun createGroup(group: Group) = withContext(Dispatchers.IO) {
@@ -46,7 +46,7 @@ class GroupRepository(private val db: AppDatabase) {
     }
 
     suspend fun getMembersOfGroup(groupId: String): List<GroupMember> = withContext(Dispatchers.IO) {
-        q.getMembersForGroup(groupId).executeAsList().map { it.toMember() }
+        q.getMembersForGroup(groupId, ::memberMapper).executeAsList()
     }
 
     suspend fun upsertMember(member: GroupMember) = withContext(Dispatchers.IO) {
@@ -66,27 +66,21 @@ class GroupRepository(private val db: AppDatabase) {
     }
 
     fun observeMembers(groupId: String): Flow<List<GroupMember>> =
-        q.getMembersForGroup(groupId).asFlow().mapToList(Dispatchers.IO)
-            .map { rows -> rows.map { it.toMember() } }
+        q.getMembersForGroup(groupId, ::memberMapper).asFlow().mapToList(Dispatchers.IO)
 }
 
-// SELECT * FROM groups → SQLDelight generates the table class Groups
-private fun com.p2ptaskmanager.db.Groups.toGroup() = Group(
-    id = id,
-    name = name,
-    creatorPeerId = creatorPeerId,
-    createdAt = createdAt,
-    inviteCode = inviteCode,
-    color = color.toInt()
+private fun groupMapper(
+    id: String, name: String, creatorPeerId: String, createdAt: Long, inviteCode: String, color: Long
+): Group = Group(
+    id = id, name = name, creatorPeerId = creatorPeerId,
+    createdAt = createdAt, inviteCode = inviteCode, color = color.toInt()
 )
 
-// SELECT * FROM group_members → SQLDelight generates GroupMembers (PascalCase of table name)
-private fun com.p2ptaskmanager.db.GroupMembers.toMember() = GroupMember(
-    groupId = groupId,
-    peerId = peerId,
-    displayName = displayName,
-    deviceName = deviceName,
-    avatarColor = avatarColor.toInt(),
-    joinedAt = joinedAt,
-    lastSeenAt = lastSeenAt
+private fun memberMapper(
+    groupId: String, peerId: String, displayName: String, deviceName: String,
+    avatarColor: Long, joinedAt: Long, lastSeenAt: Long
+): GroupMember = GroupMember(
+    groupId = groupId, peerId = peerId, displayName = displayName,
+    deviceName = deviceName, avatarColor = avatarColor.toInt(),
+    joinedAt = joinedAt, lastSeenAt = lastSeenAt
 )
