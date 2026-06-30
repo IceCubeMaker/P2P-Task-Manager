@@ -29,26 +29,6 @@ CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(isCompleted);
 CREATE INDEX IF NOT EXISTS idx_tasks_creator ON tasks(creatorPeerId);
 CREATE INDEX IF NOT EXISTS idx_tasks_sort ON tasks(manualSortOrder);
 
--- FTS5 virtual table for full-text search
-CREATE VIRTUAL TABLE IF NOT EXISTS tasks_fts USING fts5(
-    title,
-    description,
-    content=tasks,
-    content_rowid=rowid
-);
-
--- FTS triggers to keep search index in sync
-CREATE TRIGGER IF NOT EXISTS tasks_fts_ai AFTER INSERT ON tasks BEGIN
-    INSERT INTO tasks_fts(rowid, title, description) VALUES (new.rowid, new.title, new.description);
-END;
-CREATE TRIGGER IF NOT EXISTS tasks_fts_ad AFTER DELETE ON tasks BEGIN
-    INSERT INTO tasks_fts(tasks_fts, rowid, title, description) VALUES ('delete', old.rowid, old.title, old.description);
-END;
-CREATE TRIGGER IF NOT EXISTS tasks_fts_au AFTER UPDATE ON tasks BEGIN
-    INSERT INTO tasks_fts(tasks_fts, rowid, title, description) VALUES ('delete', old.rowid, old.title, old.description);
-    INSERT INTO tasks_fts(rowid, title, description) VALUES (new.rowid, new.title, new.description);
-END;
-
 upsertTask:
 INSERT OR REPLACE INTO tasks VALUES ?;
 
@@ -77,9 +57,7 @@ getByIds:
 SELECT * FROM tasks WHERE id IN :ids;
 
 searchTasks:
-SELECT t.* FROM tasks t
-JOIN tasks_fts ON tasks_fts.rowid = t.rowid
-WHERE tasks_fts MATCH :query AND t.isDeleted = 0;
+SELECT * FROM tasks WHERE (title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%') AND isDeleted = 0;
 
 markCompleted:
 UPDATE tasks SET isCompleted = 1, completedAt = :completedAt, completedByPeerId = :peerId, bujoState = 'COMPLETED', updatedAt = :updatedAt, vectorClock = :vectorClock WHERE id = :id;

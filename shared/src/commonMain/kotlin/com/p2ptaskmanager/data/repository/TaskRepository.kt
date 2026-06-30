@@ -109,9 +109,7 @@ class TaskRepository(private val db: AppDatabase) {
 
     suspend fun searchTasks(query: String): List<Task> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
-        val ftsQuery = query.trim().split("\\s+".toRegex())
-            .joinToString(" ") { "$it*" }
-        queries.searchTasks(ftsQuery).executeAsList().map { it.toTask() }
+        queries.searchTasks(query.trim()).executeAsList().map { it.toTask() }
     }
 
     suspend fun getManifest(groupId: String): Map<String, String> = withContext(Dispatchers.IO) {
@@ -258,31 +256,6 @@ private fun com.p2ptaskmanager.db.Tasks.toTask() = Task(
     isDeleted = isDeleted != 0L
 )
 
-
-private fun com.p2ptaskmanager.db.SearchTasks.toTask() = Task(
-    id = id,
-    groupId = groupId,
-    creatorPeerId = creatorPeerId,
-    assignedPeerId = assignedPeerId,
-    title = title,
-    description = description,
-    dueDate = dueDate,
-    userImportance = userImportance.toFloat(),
-    estimatedMinutes = estimatedMinutes?.toInt(),
-    reminderOffsetMinutes = reminderOffsetMinutes?.toInt(),
-    recurrenceRuleJson = recurrenceRuleJson,
-    colorLabel = colorLabel?.toInt(),
-    manualSortOrder = manualSortOrder,
-    bujoState = runCatching { BujoState.valueOf(bujoState) }.getOrDefault(BujoState.OPEN),
-    isCompleted = isCompleted != 0L,
-    completedAt = completedAt,
-    completedByPeerId = completedByPeerId,
-    isRepeating = isRepeating != 0L,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-    vectorClock = vectorClock,
-    isDeleted = isDeleted != 0L
-)
 
 private fun Task.toDbRow() = com.p2ptaskmanager.db.Tasks(
     id = id,

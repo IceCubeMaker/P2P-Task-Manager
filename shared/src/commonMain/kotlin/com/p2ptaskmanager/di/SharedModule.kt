@@ -12,7 +12,6 @@ import com.p2ptaskmanager.ui.viewmodel.PeerSyncViewModel
 import com.p2ptaskmanager.ui.viewmodel.ProfileViewModel
 import com.p2ptaskmanager.ui.viewmodel.TaskDetailViewModel
 import com.p2ptaskmanager.ui.viewmodel.TodayPlanViewModel
-import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val sharedModule = module {
@@ -21,13 +20,13 @@ val sharedModule = module {
     single { TimerRepository(get()) }
     single { GroupRepository(get()) }
 
-    viewModel { HomeViewModel(get(), get(), get(), get()) }
-    viewModel { TaskDetailViewModel(get(), get(), get()) }
-    viewModel { CreateEditTaskViewModel(get(), get(), get()) }
-    viewModel { GroupsViewModel(get(), get()) }
-    viewModel { GroupDetailViewModel(get(), get()) }
-    viewModel { ProfileViewModel(get(), get()) }
-    viewModel { OnboardingViewModel(get(), get()) }
-    viewModel { TodayPlanViewModel(get(), get(), get()) }
-    viewModel { PeerSyncViewModel(get(), get(), get(), get()) }
+    factory { HomeViewModel(get(), get(), get(), get()) }
+    factory { TaskDetailViewModel(get(), get(), get()) }
+    factory { CreateEditTaskViewModel(get(), get(), get()) }
+    factory { GroupsViewModel(get(), get()) }
+    factory { GroupDetailViewModel(get(), get()) }
+    factory { ProfileViewModel(get(), get()) }
+    factory { OnboardingViewModel(get(), get()) }
+    factory { TodayPlanViewModel(get(), get(), get()) }
+    factory { PeerSyncViewModel(get(), get(), get(), get()) }
 }
