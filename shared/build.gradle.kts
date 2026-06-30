@@ -26,6 +26,7 @@ kotlin {
 
     sourceSets {
         val commonMain by getting {
+            kotlin.srcDir(layout.buildDirectory.dir("generated/sqldelight/code/AppDatabase/commonMain"))
             dependencies {
                 // Compose Multiplatform
                 implementation(compose.runtime)

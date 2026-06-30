@@ -16,6 +16,7 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
 @Composable
@@ -77,5 +78,3 @@ fun QuickDateChips(
     }
 }
 
-private fun kotlinx.datetime.LocalDateTime.toInstant(tz: TimeZone): kotlinx.datetime.Instant =
-    kotlinx.datetime.toInstant(tz)

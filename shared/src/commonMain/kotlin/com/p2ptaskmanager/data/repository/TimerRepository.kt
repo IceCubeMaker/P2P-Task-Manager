@@ -60,7 +60,7 @@ class TimerRepository(private val db: AppDatabase) {
     }
 
     suspend fun getTotalMinutes(taskId: String): Double = withContext(Dispatchers.IO) {
-        db.habitQueries.getTotalActualMinutes(taskId).executeAsOneOrNull() ?: 0.0
+        (db.habitQueries.getTotalActualMinutes(taskId).executeAsOneOrNull() ?: 0L) / 60000.0
     }
 
     fun isRunning(taskId: String): Boolean =

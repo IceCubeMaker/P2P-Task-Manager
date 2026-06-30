@@ -170,6 +170,7 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ActiveTasksTab(
     state: HomeUiState,
@@ -303,6 +304,7 @@ fun TaskRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SimpleTaskRow(task: Task, onClick: () -> Unit) {
     Row(

@@ -13,9 +13,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.p2ptaskmanager.ui.theme.GoldAccent
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 
 /** Journal-style section date header: "JUNE 29 — SUNDAY" with full underline */
@@ -103,10 +105,4 @@ fun formatDateHeader(epochMs: Long?): String {
     }
 }
 
-private fun LocalDate.plusDays(days: Int): LocalDate {
-    return kotlinx.datetime.LocalDate(year, month, dayOfMonth).let {
-        kotlinx.datetime.DatePeriod(days = days).let { period ->
-            it.plus(period)
-        }
-    }
-}
+private fun LocalDate.plusDays(days: Int): LocalDate = this.plus(days, DateTimeUnit.DAY)

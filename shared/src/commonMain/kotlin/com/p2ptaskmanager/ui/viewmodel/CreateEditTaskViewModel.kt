@@ -82,12 +82,11 @@ class CreateEditTaskViewModel(
 
     fun onTitleChanged(title: String) {
         _uiState.value = _uiState.value.copy(title = title)
-        val nlParsed = DateNLParser.parse(title)
+        val nlParsed = DateNLParser().parse(title)
         if (nlParsed != null) {
-            val ms = nlParsed.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds()
             _uiState.value = _uiState.value.copy(
-                nlDateHint = "Date detected: ${nlParsed.date} ${if (nlParsed.hour != 0) "${nlParsed.hour}:00" else ""}",
-                dueDate = ms
+                nlDateHint = "Date detected: ${nlParsed.displayText}",
+                dueDate = nlParsed.instant
             )
         }
         if (title.length > 3) updateEstimation(title)

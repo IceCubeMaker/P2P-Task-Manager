@@ -59,7 +59,7 @@ getActiveTimeEntry:
 SELECT * FROM task_time_entries WHERE taskId = :taskId AND endAt IS NULL LIMIT 1;
 
 getTotalActualMinutes:
-SELECT CAST(SUM(endAt - startAt) AS REAL) / 60000.0 FROM task_time_entries WHERE taskId = :taskId AND endAt IS NOT NULL;
+SELECT SUM(endAt - startAt) FROM task_time_entries WHERE taskId = :taskId AND endAt IS NOT NULL;
 
 getSimilarCompletedDurations:
 SELECT tte.taskId, SUM(tte.endAt - tte.startAt) AS totalMs
